@@ -1,0 +1,17 @@
+﻿@section SPAViews {
+    @Html.Partial("_Home")
+}
+@section Scripts{
+    @Scripts.Render("~/bundles/knockout")
+    @Scripts.Render("~/bundles/app")
+}
+
+<script type="text/javascript">
+
+    // ET: in app.viewmodel.js und app.datamodel.js wird die baseUrl gebraucht.
+
+    var NeoGeo = {};
+
+    NeoGeo.baseUrl = '@string.Format("{0}://{1}{2}", Request.Url.Scheme, Request.Url.Authority, Url.Content("~"))';
+
+</script>

@@ -1,0 +1,150 @@
+﻿@using Microsoft.AspNet.Identity
+@{
+    ViewBag.Title = "Index";
+
+}
+<div class="jumbotron">
+    <h1>EHAW Messenger</h1>
+    <p class="lead"></p>
+
+</div>
+<div class="container">
+    <input type="text" id="message" />
+    <input type="button" id="sendmessage" value="Send" />
+
+    <input type="button" id="sendmessageMulti" value="Send Multi " />
+
+    max: <input type="text" id="maxMessages" value="5000" />
+    intervall: <input type="text" id="intervall" value="20" />
+    message at once<input type="text" id="messageAtOnce" value="100" />
+    <span id="duration"></span><br />
+    Name: <input type="text" id="displayname" value="@User.Identity.GetUserName()" />
+    <ul id="discussion" style="height:400px;"></ul>
+</div>
+@section scripts {
+    @Scripts.Render("~/bundles/jquerysignalr")
+
+    <script src="~/signalr/hubs"></script>
+    <!--SignalR script to update the chat page and send messages.-->
+    <script>
+        $(function () {
+
+            // Reference the auto-generated proxy for the hub.
+            var chat = $.connection.chatHub;
+
+            var MessageCache = "";
+            var MessageCount = 0;
+
+            var MessageRenderTimer = null;
+
+
+            // Create a function that the hub can call back to display messages.
+            chat.client.addNewMessageToPage = function (name, message) {
+
+                MessageCount++;
+
+                MessageCache = '<li><strong>' + htmlEncode(name)
+                        + '</strong>: ' + htmlEncode(message) + '</li>'
+                        + MessageCache;
+
+                if (MessageRenderTimer == null) {
+
+                    MessageRenderTimer = setTimeout(function () {
+
+
+
+                        $('#discussion')[0].innerHTML = MessageCache;
+
+                        if (MessageCount > 100) {
+                            MessageCache = "";
+                            MessageCount = 0;
+                        }
+
+                        MessageRenderTimer = null;
+
+
+                    }, 400);
+
+                }
+
+
+            };
+            // Get the user name and store it to prepend to messages.
+            //$('#displayname').val(prompt('Enter your name:', ''));
+            // Set initial focus to message input box.
+            $('#message').focus();
+            // Start the connection.
+            $.connection.hub.start().done(function () {
+                $('#sendmessage').click(function () {
+                    // Call the Send method on the hub.
+                    chat.server.send($('#displayname').val(), $('#message').val());
+                    // Clear text box and reset focus for next comment.
+                    $('#message').val('').focus();
+                });
+
+
+                var start;
+                var end;
+
+
+                $('#sendmessageMulti').click(function () {
+
+                    document.getElementById("duration").innerHTML = "";
+
+                    var maxMessages = document.getElementById("maxMessages").value;
+                    var intervall = document.getElementById("intervall").value;
+                    var messageAtOnce = document.getElementById("messageAtOnce").value;
+
+                    start = new Date();
+
+                    var MessageCount1 = { count: 0 };
+
+                    sendMessage($('#message').val(), parseInt(messageAtOnce), MessageCount1);
+
+                    var MessageIntervall = window.setInterval(function () {
+
+                        sendMessage($('#message').val(), parseInt(messageAtOnce), MessageCount1);
+
+                        if (MessageCount1.count > parseInt(maxMessages)) {
+
+                            clearInterval(MessageIntervall);
+
+                            end = new Date();
+
+                            var diff = end - start;
+
+
+                            document.getElementById("duration").innerHTML = diff;
+
+                        }
+
+                    }, parseInt(intervall));
+
+
+                });
+
+
+
+                function sendMessage(messageText, sendCount, messageCount) {
+
+                    for (var i = 0; i < sendCount; i++) {
+
+                        messageCount.count++;
+
+                        chat.server.send($('#displayname').val(), messageCount.count + ') ' + messageText);
+                    }
+
+                }
+
+            });
+        });
+        // This optional function html-encodes messages for display in the page.
+        function htmlEncode(value) {
+            var encodedValue = $('<div />').text(value).html();
+            return encodedValue;
+        }
+    </script>
+
+
+}
+
